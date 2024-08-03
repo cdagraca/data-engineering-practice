@@ -1,5 +1,27 @@
-## Exercise 8 - Understanding and use DuckDB.
+# Exercise 8 - Understanding and use DuckDB.
 
+## Assumptions
+
+Assumptions on data requests that would need to be clarified by the data
+consumer/product team/random number generator
+1. count by city - city names can be duplicated; presumably we don't want to lump all the
+                   Springfields together
+2. most popular vehicles - this could mean just make, make+model, or make+model+model year;
+                            colloquially, people are most likely to say that, e.g.
+                            Toyota Prius is more popular than Tesla S, so using make+model
+3. tie-breaks - top N queries are vulnerable to duplicate values; the correct behaviour depends on
+                the use case:
+                - always take exact N
+                    - sometimes it's not important which of the ties comes through
+                    - deterministic result requires some additional ordering rule
+                - take all results up to the Nth rank
+                    - ties at exactly the Nth rank will return more than N results
+                    - dense_rank could return many more, if there are ties at higher ranks as well
+                I will use non-dense ranking and take any rows with rank <= N
+4. count by model year - this could be a single number per year, or a count of each make/model within
+                         each year; I'm going for the second because writing one record per 
+                         partition makes me sad
+## The instructions
 In this exercise we are going to have some problems to solve that will require us to 
 use various DuckDB functions and functionality. You can read through the documentation
 here https://duckdb.org/docs/
