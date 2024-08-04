@@ -61,7 +61,13 @@ class DuckDBUtils:
                     raise err
         self.conn.execute(f"CREATE TABLE {table_name} ({formatted_schema})")
 
-    def load_data(self, data: pd.DataFrame, table_name: str):
-        # TODO: consider checking column names, order, datatypes...
-        my_data = data
-        self.conn.sql(f"INSERT INTO {table_name} SELECT * FROM my_data")
+    def load_data(self, data: pd.DataFrame, table_name: str, err_table_name: str, err_column_name: str = "errors"):
+        # TODO: consider checking column names, order
+        # TODO: does duckdb support diverting failed records to error table?
+        select_clause = "*"
+        where_clause = ""
+        if "errors" in data.columns:
+            self.conn.sql(f"INSERT INTO {err_table_name} SELECT * FROM data WHERE {err_column_name} IS NOT NULL")
+            select_clause = ",".join([c for c in data.columns if c != err_column_name])
+            where_clause = f"WHERE {err_column_name} IS NULL"
+        self.conn.sql(f"INSERT INTO {table_name} SELECT {select_clause} FROM my_data {where_clause}")

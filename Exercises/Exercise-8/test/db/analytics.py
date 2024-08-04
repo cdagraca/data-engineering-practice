@@ -27,7 +27,7 @@ class TestEVAnalytics(unittest.TestCase):
             "museum": "VARCHAR",
         }
         db_conn.create_table(self.table_name, schema)
-        db_conn.load_data(self.data_no_ties, self.table_name)
+        db_conn.load_data(self.data_no_ties, self.table_name, "")
         self.ev_analytics = EVAnalytics(db_conn.conn, self.table_name)
 
     @staticmethod
@@ -45,7 +45,7 @@ class TestEVAnalytics(unittest.TestCase):
              ["France", "Paris", 2],
              ["France", "Marseilles", 1]],
             ["country", "city", self.ev_analytics.count_col_name],
-        ["country", "city"])
+            ["country", "city"])
         self.assertEqual(
             TestEVAnalytics.format_result(self.ev_analytics.group_and_count(["country", "city"]),
                                           ["country", "city"]),
@@ -63,7 +63,7 @@ class TestEVAnalytics(unittest.TestCase):
              ["France", "Paris", 2, 1],
              ["France", "Marseilles", 1, 2]],
             ["country", "city", self.ev_analytics.count_col_name, self.ev_analytics.rank_col_name],
-        ["country", "city"])
+            ["country", "city"])
         count_data = self.ev_analytics.group_and_count(["Country", "City"])
         self.assertEqual(
             TestEVAnalytics.format_result(self.ev_analytics.rank_by_count(count_data, ["country"]),
@@ -78,7 +78,7 @@ class TestEVAnalytics(unittest.TestCase):
              ["France", "Paris", 2, 2],
              ["France", "Marseilles", 1, 4]],
             ["country", "city", self.ev_analytics.count_col_name, self.ev_analytics.rank_col_name],
-        ["country", "city"])
+            ["country", "city"])
         count_data = self.ev_analytics.group_and_count(["Country", "City"])
         self.assertEqual(
             TestEVAnalytics.format_result(self.ev_analytics.rank_by_count(count_data, []),
@@ -91,7 +91,7 @@ class TestEVAnalytics(unittest.TestCase):
             [["UK", "London", 3, 1],
              ["France", "Paris", 2, 1]],
             ["country", "city", self.ev_analytics.count_col_name, self.ev_analytics.rank_col_name],
-        ["country", "city"])
+            ["country", "city"])
         count_data = self.ev_analytics.group_and_count(["Country", "City"])
         ranked_data = self.ev_analytics.rank_by_count(count_data, ["Country"])
         self.assertEqual(
@@ -100,13 +100,13 @@ class TestEVAnalytics(unittest.TestCase):
             expected
         )
 
-    def test_rank_by_count_no_partition(self):
+    def test_top_n_no_partition(self):
         expected = TestEVAnalytics.get_expected(
             [["UK", "London", 3, 1],
              ["UK", "Edinburgh", 2, 2],
              ["France", "Paris", 2, 2]],
             ["country", "city", self.ev_analytics.count_col_name, self.ev_analytics.rank_col_name],
-        ["country", "city"])
+            ["country", "city"])
         count_data = self.ev_analytics.group_and_count(["Country", "City"])
         ranked_data = self.ev_analytics.rank_by_count(count_data, [])
         self.assertEqual(
@@ -114,7 +114,3 @@ class TestEVAnalytics(unittest.TestCase):
                                           ["country", "city"]),
             expected
         )
-
-
-
-

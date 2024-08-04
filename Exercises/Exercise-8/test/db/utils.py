@@ -1,9 +1,7 @@
 import unittest
 
-import duckdb
+import numpy as np
 import pandas as pd
-
-from duckdb.duckdb import CatalogException
 
 from db.utils import *
 
@@ -50,7 +48,22 @@ class TestDbUtils(unittest.TestCase):
         db_conn = DuckDBUtils("")
         db_conn.create_table(table_name, input_schema)
         data = pd.DataFrame.from_dict({"col1": ["a", "b"], "col2": [1, 2]})
-        db_conn.load_data(data, table_name)
+        db_conn.load_data(data, table_name, "")
         assert db_conn.conn.sql(f"SELECT * FROM {table_name}").df().to_dict() == data.to_dict()
 
-
+    def test_load_data_errors(self):
+        input_schema = {"col1": "VARCHAR", "col2": "INTEGER"}
+        err_schema = {"col1": "VARCHAR", "col2": "VARCHAR", "errors": "VARCHAR"}
+        table_name = "my_table"
+        err_table_name = "my_err_table"
+        db_conn = DuckDBUtils("")
+        db_conn.create_table(table_name, input_schema)
+        db_conn.create_table(err_table_name, err_schema)
+        data = pd.DataFrame.from_dict({"col1": ["a", "b"], "col2": [1, 2], "errors": [np.nan, "o noes"]})
+        db_conn.load_data(data, table_name, err_table_name)
+        expected_success = data[data["col1"] == "a"][["col1", "col2"]]
+        expected_errors = data[data["col1"] == "b"].reset_index()[["col1", "col2", "errors"]].astype(str)
+        assert ((db_conn.conn.sql(f"SELECT * FROM {table_name}").df().to_dict() ==
+                 expected_success.to_dict()) and
+                (db_conn.conn.sql(f"SELECT * FROM {err_table_name}").df().to_dict() ==
+                 expected_errors.to_dict()))

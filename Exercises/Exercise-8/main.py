@@ -1,6 +1,6 @@
 import os.path
 
-from src.data.utils import split_lat_long
+from src.data.utils import *
 from src.db.analytics import *
 from src.db.utils import *
 
@@ -25,23 +25,31 @@ db_schema = {
     "vehicle_location_long": "FLOAT",
 }
 
+err_db_schema = dict(zip(db_schema.keys(), ["varchar"]*len(db_schema.keys())))
+err_db_schema["errors"] = "VARCHAR"
+
 db_name = "ex8.db"
 table_name = "ev_population_data"
+err_table_name = "ev_population_errors"
 data_path = "/app/data"
 output_path = f"{data_path}/output"
 
 
 def main():
     data = pd.read_csv(f"{data_path}/Electric_Vehicle_Population_Data.csv")
-    data = data.apply(lambda row: split_lat_long(row,
-                                                 "Vehicle Location",
-                                                 "Vehicle Location Lat",
-                                                 "Vehicle Location Long"), axis=1)
+    data = data.apply(lambda row: LatLongSplitter("Vehicle Location", "Vehicle Location Lat", "Vehicle Location Long"
+                                                  ).process_value(row), axis=1)
     data.drop("Vehicle Location", axis=1, inplace=True)
+    for int_col in [kv[0] for kv in db_schema.keys() if kv[1] in ["INTEGER", "BIGINT", "SMALLINT"]]:
+        data = data.apply(lambda row: CheckInt(int_col).process_value(row))
+    for float_col in [kv[0] for kv in db_schema.keys() if kv[1] in ["FLOAT", "DOUBLE"]]:
+        data = data.apply(lambda row: CheckFloat(float_col).process_value(row))
     conn = DuckDBUtils(db_name)
     conn.create_table(table_name, db_schema, drop_if_exists=True)
-    # TODO: create exceptions table, load valid records into orig, errors into exceptions
-    conn.load_data(data, table_name)
+    # create an exceptions table of all-strings to hold records that fail processing for any reason
+    conn.create_table(err_table_name, err_db_schema,
+                      drop_if_exists=True)
+    conn.load_data(data[data["errors"]], table_name, err_table_name)
 
     analyser = EVAnalytics(conn.conn, table_name)
 
@@ -62,13 +70,16 @@ def main():
     vehicle_types_by_postal_code = analyser.group_and_count(["postal_code", "make", "model"])
     vehicle_ranks_by_postal_code = analyser.rank_by_count(vehicle_types_by_postal_code, ["postal_code"])
     top_by_postal_code = analyser.top_n(vehicle_ranks_by_postal_code, 1)
-    top_by_postal_code.sort(["postal_code", EVAnalytics.rank_col_name]).to_csv(f"{output_path}/top_vehicle_by_postal_code.csv")
+    top_by_postal_code.sort(["postal_code", EVAnalytics.rank_col_name]
+                            ).to_csv(f"{output_path}/top_vehicle_by_postal_code.csv")
 
     # Output 4: count by model year, write partitions
     counts_by_year = analyser.group_and_count(["make", "model", "model_year"])
     # TODO: convert to spark and just use spark_df.write.partitionBy("model_year").parquet(...)
     # apparently there is an "experimental" API where "features are still missing"
-    conn.conn.execute(f"COPY counts_by_year TO '{output_path}/counts_by_model_year.parquet' (FORMAT parquet, PARTITION_BY (model_year))")
+    conn.conn.execute(f"COPY counts_by_year TO '{output_path}/counts_by_model_year.parquet' " +
+                      "(FORMAT parquet, PARTITION_BY (model_year))")
+
 
 if __name__ == "__main__":
     main()

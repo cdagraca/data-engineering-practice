@@ -2,18 +2,21 @@ import duckdb
 
 from duckdb.duckdb import DuckDBPyConnection, DuckDBPyRelation
 
+
 class EVAnalytics:
     count_col_name = "count"
     rank_col_name = "count_rank"
 
     def __init__(self, db_conn: DuckDBPyConnection, table_name: str):
-        self.db_conn = db_conn #duckdb.connect(db_name)
+        self.db_conn = db_conn
         self.table_name = table_name
 
     def group_and_count(self, columns: list):
         if len(columns) > 0:
             cols_string = ",".join(columns)
-            return self.db_conn.sql(f"SELECT {cols_string}, count(*) AS {self.count_col_name} FROM {self.table_name} GROUP BY {cols_string}")
+            return self.db_conn.sql(
+                f"SELECT {cols_string}, count(*) AS {self.count_col_name} FROM {self.table_name} GROUP BY {cols_string}"
+            )
         else:
             raise ValueError("At least on grouping column must be specified")
 
