@@ -49,7 +49,7 @@ def main():
     # create an exceptions table of all-strings to hold records that fail processing for any reason
     conn.create_table(err_table_name, err_db_schema,
                       drop_if_exists=True)
-    conn.load_data(data[data["errors"]], table_name, err_table_name)
+    conn.load_data(data, table_name, err_table_name)
 
     analyser = EVAnalytics(conn.conn, table_name)
 
@@ -78,7 +78,7 @@ def main():
     # TODO: convert to spark and just use spark_df.write.partitionBy("model_year").parquet(...)
     # apparently there is an "experimental" API where "features are still missing"
     conn.conn.execute(f"COPY counts_by_year TO '{output_path}/counts_by_model_year.parquet' " +
-                      "(FORMAT parquet, PARTITION_BY (model_year))")
+                      "(FORMAT parquet, PARTITION_BY (model_year), OVERWRITE_OR_IGNORE)")
 
 
 if __name__ == "__main__":

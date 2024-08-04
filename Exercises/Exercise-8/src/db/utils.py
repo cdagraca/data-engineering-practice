@@ -70,4 +70,4 @@ class DuckDBUtils:
             self.conn.sql(f"INSERT INTO {err_table_name} SELECT * FROM data WHERE {err_column_name} IS NOT NULL")
             select_clause = ",".join([c for c in data.columns if c != err_column_name])
             where_clause = f"WHERE {err_column_name} IS NULL"
-        self.conn.sql(f"INSERT INTO {table_name} SELECT {select_clause} FROM my_data {where_clause}")
+        self.conn.sql(f"INSERT INTO {table_name} SELECT {select_clause} FROM data {where_clause}")
